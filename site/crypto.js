@@ -31,7 +31,7 @@ export async function decryptEnvelope(envelope, passphrase) {
   return result;
 }
 export async function fetchAndDecrypt(passphrase) {
-  const response = await fetch('/data/finance.enc.json', {cache: 'no-store'});
+  const response = await fetch('./data/finance.enc.json', {cache: 'no-store'});
   if (!response.ok) {
     throw new Error('加密账本尚未发布，请先配置私有仓库的 GitHub Actions。');
   }
