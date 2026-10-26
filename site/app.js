@@ -8,7 +8,8 @@ import {
 const root=document.querySelector('#root');
 const state={data:null,mode:null,page:'overview',month:'',filter:'all',search:'',passphrase:'',visible:false,busy:false,error:'',mobileMenu:false};
 const pages={overview:'财务总览',transactions:'收支明细',assets:'家庭资产',reports:'月度报告'};
-const subtitles={overview:'每一笔数字背后，都是更从容的生活。',transactions:'共同消费逐笔可查，个人消费只保留月度汇总。',assets:'看清总净资产，也看清真正可动用的资金。',reports:'回顾这个月的变化，了解每一份钱的去向。'};
+const pageEmoji={overview:'📒',transactions:'🧾',assets:'🏠',reports:'🗓️'};
+const subtitles={overview:'收入、支出与资产变化，一页掌握。',transactions:'家庭共同消费保留明细，个人消费仅统计月度合计。',assets:'总净资产、金融净资产与可动用资金。',reports:'每个月的收支和资产记录。'};
 const icons={
   activity:'<path d="M2 12h4l3-8 5 16 3-8h5"/>',
   shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
@@ -38,7 +39,7 @@ const icons={
 };
 const ICON=(key,size=18)=>`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[key]||icons.info}</svg>`;
 const esc=(value)=>String(value??'').replace(/[&<>"']/g, (ch)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const palette=['#376f5c','#93ab92','#e0bd80','#92a8c8','#dba18b','#b6a2c1','#95afa9','#d7cfb9'];
+const palette=['#809c8a','#d0ae7a','#8eabc0','#b2a0c0','#c99487','#acb6a5','#d0bea1','#a9a9a5'];
 const person=(member)=>member==='me'?'我':member==='spouse'?'老婆':'家庭';
 const currentMonth=()=>getMonth(state.data,state.month);
 const header=(label,detail='',action='')=>`<div class="section-title"><div><h2>${esc(label)}</h2>${detail?`<p>${esc(detail)}</p>`:''}</div>${action}</div>`;
@@ -55,10 +56,24 @@ const actionLink=(target,text)=>`<button class="text-action" data-page="${target
 const tip='所有财务计算都在浏览器内完成';
 
 function loginView(){
-  return `<div class="login-wrap"><div class="login-orb login-orb-one"></div><div class="login-orb login-orb-two"></div>
-  <div class="login-top"><div class="brand-icon">${ICON('activity',23)}</div><span>Family Finance <i>·</i> 家庭财务</span></div>
-  <div class="login-grid"><div class="login-intro"><div class="eyebrow"><span class="eyebrow-line"></span> PRIVATE FINANCE SPACE</div><h1>让每一份积累，<br/><span>都有迹可循。</span></h1><p>一个属于两个人的家庭财务空间。<br/>收支清晰，资产有数，生活更有底气。</p><div class="login-benefits"><span>${ICON('shield',17)} 数据仅在本机解密</span><span>${ICON('lock',17)} 无需创建账户</span><span>${ICON('trending',17)} 长期记录家庭变化</span></div></div>
-  <div class="login-card"><div class="login-emblem">${ICON('shield',29)}</div><h2>解锁家庭财务</h2><p>输入你们共享的加密口令，安全查看财务报表。</p><form id="unlock-form"><label for="passphrase">访问口令</label><div class="password-line">${ICON('lock',18)}<input id="passphrase" type="${state.visible?'text':'password'}" value="${esc(state.passphrase)}" placeholder="输入共享口令" autocomplete="off" required/><button class="reveal-btn" data-action="reveal" type="button">${state.visible?'隐藏':'显示'}</button></div>${state.error?`<div class="login-error" role="alert">${esc(state.error)}</div>`:''}<button class="primary-button unlock-btn" ${state.busy?'disabled':''} type="submit">${state.busy?'正在本地解密…':'解锁财务空间'} ${ICON('arrow',17)}</button></form><div class="login-divider"><span>或者</span></div><button class="demo-button" type="button" data-action="demo">${ICON('sparkle',17)} 体验演示看板</button><div class="login-footnote">${ICON('shield',14)}<span>加密账本下载后在浏览器本地解密，口令不会发送到服务器。</span></div></div></div><div class="login-bottom">简洁记录 · 安全陪伴 · 长期主义</div></div>`;
+  return `<div class="login-wrap">
+    <header class="login-top"><div class="brand-icon">家</div><span>家庭财务 <span class="login-separator">/</span> 私密空间</span></header>
+    <div class="login-grid"><div class="login-card">
+      <div class="login-emblem">🔐</div>
+      <h1>家庭财务</h1>
+      <p class="login-description">解锁家庭账本，查看收支、资产和每个月的变化。</p>
+      <form id="unlock-form"><label for="passphrase">访问口令</label>
+        <div class="password-line">${ICON('lock',17)}<input id="passphrase" type="${state.visible?'text':'password'}" value="${esc(state.passphrase)}" placeholder="输入你们共享的口令" autocomplete="off" required/>
+        <button class="reveal-btn" data-action="reveal" type="button">${state.visible?'隐藏':'显示'}</button></div>
+        ${state.error?`<div class="login-error" role="alert">${esc(state.error)}</div>`:''}
+        <button class="primary-button unlock-btn" ${state.busy?'disabled':''} type="submit">${state.busy?'正在本地解密…':'解锁家庭财务'} ${ICON('arrow',16)}</button>
+      </form>
+      <div class="login-divider"><span>或</span></div>
+      <button class="demo-button" type="button" data-action="demo">${ICON('eye',16)} 查看示例看板</button>
+      <div class="login-footnote">${ICON('shield',15)}<span>数据仅在浏览器内解密。共享口令不会发送至服务器。</span></div>
+    </div></div>
+    <footer class="login-bottom">由 GitHub Pages 提供静态页面 · 数据加密存储</footer>
+  </div>`;
 }
 
 function wrapper(content){
@@ -66,9 +81,9 @@ function wrapper(content){
   const nav=Object.entries(pages).map(([id,title])=>`<button class="side-nav-item ${state.page===id?'active':''}" type="button" data-page="${id}">${ICON(navIcons[id],19)}<span>${title}</span>${state.page===id?'<span class="nav-active-marker"></span>':''}</button>`).join('');
   const month=currentMonth();
   const monthOptions=sortedMonths(state.data).map(x=>`<option value="${esc(x.month)}" ${x.month===state.month?'selected':''}>${esc(x.month.slice(0,4))} 年 ${Number(x.month.slice(5))} 月</option>`).join('');
-  return `<div class="app-shell">${state.mobileMenu?'<button class="mobile-overlay" aria-label="关闭菜单" data-action="close-menu"></button>':''}<aside class="sidebar ${state.mobileMenu?'side-open':''}"><div class="sidebar-brand"><div class="brand-icon">${ICON('activity',21)}</div><div><strong>家庭财务</strong><span>FAMILY FINANCE</span></div></div><div class="side-label">工作台</div><nav class="side-nav">${nav}</nav><div class="sidebar-spacer"></div><div class="sidebar-security">${ICON('shield')}<div><strong>隐私优先</strong><p>${state.mode==='demo'?'正在查看模拟数据':'数据已在本地解密'}</p></div></div><div class="sidebar-profile"><span class="profile-avatar">家</span><div><strong>我们的家庭</strong><small>${state.mode==='demo'?'演示预览模式':'专属私密账本'}</small></div><button type="button" data-action="lock" title="锁定">${ICON('lock')}</button></div></aside>
+  return `<div class="app-shell">${state.mobileMenu?'<button class="mobile-overlay" aria-label="关闭菜单" data-action="close-menu"></button>':''}<aside class="sidebar ${state.mobileMenu?'side-open':''}"><div class="sidebar-brand"><div class="brand-icon">家</div><div><strong>家庭财务</strong><span>私人工作区</span></div></div><div class="side-label">私有页面</div><nav class="side-nav">${nav}</nav><div class="sidebar-spacer"></div><div class="sidebar-security">${ICON('shield',16)}<div><strong>已保护的账本</strong><p>${state.mode==='demo'?'仅供浏览的演示数据':'仅在你的设备上解密'}</p></div></div><div class="sidebar-profile"><span class="profile-avatar">家</span><div><strong>我们的家庭</strong><small>${state.mode==='demo'?'演示预览模式':'专属私密账本'}</small></div><button type="button" data-action="lock" title="锁定">${ICON('lock')}</button></div></aside>
   <div class="main-column"><header class="topbar"><div class="topbar-left"><button type="button" class="mobile-menu" data-action="menu" aria-label="展开菜单">${ICON('menu',21)}</button><span>家庭空间</span><span class="breadcrumb-slash">/</span><strong>${pages[state.page]}</strong></div><div class="topbar-right">${state.mode==='demo'?`<span class="demo-label">${ICON('sparkle',13)} 演示数据</span>`:''}<div class="month-picker">${ICON('calendar',16)}<select id="month-select" aria-label="选择报表月份">${monthOptions}</select>${ICON('chevron',15)}</div><button class="top-lock" type="button" data-action="lock" aria-label="锁定财务网站">${ICON('lock',17)}</button></div></header>
-  <main class="main-content"><div class="page-head"><div><div class="eyebrow muted-eyebrow">FAMILY FINANCE OVERVIEW</div><h1>${pages[state.page]}<span class="head-dot">.</span></h1><p>${subtitles[state.page]}</p></div><div class="head-aside">${month?pill(month.status):''}<span class="update-subtext">${esc(state.month)} · 月度视图</span></div></div>
+  <main class="main-content"><div class="page-head"><div><div class="page-icon" aria-hidden="true">${pageEmoji[state.page]}</div><h1>${pages[state.page]}</h1><p>${subtitles[state.page]}</p></div><div class="head-aside">${month?pill(month.status):''}<span class="update-subtext">${esc(state.month)} · 财务账本</span></div></div>
   ${state.mode==='demo'?`<div class="demo-banner">${ICON('sparkle',17)}<span>当前展示的是完全虚构的演示数据，不代表你的真实家庭资产或消费。</span><button type="button" data-action="lock">切换到真实账本 ${ICON('arrow',14)}</button></div>`:''}
   ${content}<footer class="footer"><span>Family Finance · 记录生活的长期价值</span><span>${ICON('shield',14)} ${state.mode==='demo'?'模拟数据':tip}</span></footer></main></div>
   <nav class="mobile-bottom-nav">${Object.entries(pages).map(([id,title])=>`<button type="button" data-page="${id}" class="${state.page===id?'active':''}">${ICON(navIcons[id],20)}<span>${title.replace('财务','')}</span></button>`).join('')}</nav></div>`;
@@ -82,21 +97,21 @@ function wealthLineChart(points){
   const ymax=Math.max(10,Math.ceil(Math.max(...values)/100)*100);
   const x=(i)=>left+(points.length===1?plotW/2:i*plotW/(points.length-1));
   const y=(v)=>top+plotH-(v/ymax)*plotH;
-  const grids=[0,.25,.5,.75,1].map(r=>`<line x1="${left}" x2="${w-right}" y1="${y(ymax*r)}" y2="${y(ymax*r)}" stroke="#edf0eb" stroke-dasharray="3 5"/><text x="${left-13}" y="${y(ymax*r)+4}" text-anchor="end" fill="#a5aea6" font-size="12">${Math.round(ymax*r)}万</text>`).join('');
-  const lines=[['total','#376f5c','总净资产'],['financial','#a5b69e','金融净资产'],['available','#d7b682','可动用资金']].map(([key,color,label])=>{
+  const grids=[0,.25,.5,.75,1].map(r=>`<line x1="${left}" x2="${w-right}" y1="${y(ymax*r)}" y2="${y(ymax*r)}" stroke="#efefed" stroke-dasharray="3 5"/><text x="${left-13}" y="${y(ymax*r)+4}" text-anchor="end" fill="#9b9a96" font-size="12">${Math.round(ymax*r)}万</text>`).join('');
+  const lines=[['total','#6f927c','总净资产'],['financial','#8ba4b9','金融净资产'],['available','#c5a56d','可动用资金']].map(([key,color,label])=>{
     let path='';let started=false;
     points.forEach((p,i)=>{const v=p[key];if(v===null){started=false;return;}path+=`${started?'L':'M'}${x(i).toFixed(2)},${y(v).toFixed(2)} `;started=true;});
     const circles=points.map((p,i)=>p[key]==null?'':`<circle cx="${x(i)}" cy="${y(p[key])}" r="3" fill="${color}"><title>${esc(p.month)} · ${label} ¥${p[key].toFixed(2)} 万</title></circle>`).join('');
     return `<path d="${path}" fill="none" stroke="${color}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>${circles}`;
   }).join('');
-  const ticks=points.map((p,i)=>`<text x="${x(i)}" y="${h-15}" fill="#9aa89e" font-size="12" text-anchor="middle">${esc(shortMonth(p.month))}</text>`).join('');
-  return `<div class="chart-box svg-chart"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="资产趋势线图">${grids}${lines}${ticks}</svg></div><div class="chart-legend"><span><i style="background:#376f5c"></i>总净资产</span><span><i style="background:#a5b69e"></i>金融净资产</span><span><i style="background:#d7b682"></i>可动用资金</span></div>`;
+  const ticks=points.map((p,i)=>`<text x="${x(i)}" y="${h-15}" fill="#9b9a96" font-size="12" text-anchor="middle">${esc(shortMonth(p.month))}</text>`).join('');
+  return `<div class="chart-box svg-chart"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="资产趋势线图">${grids}${lines}${ticks}</svg></div><div class="chart-legend"><span><i style="background:#6f927c"></i>总净资产</span><span><i style="background:#8ba4b9"></i>金融净资产</span><span><i style="background:#c5a56d"></i>可动用资金</span></div>`;
 }
 function spendBarChart(points){
   const available=points.some(p=>p.income!==null||p.expense!==null);
   if(!available)return empty('尚无月度收支记录','完成账单分类与个人消费汇总后，这里自动展示月度对比。');
   const maximum=Math.max(1,...points.flatMap(p=>[p.income,p.expense].filter(x=>x!==null)));
-  return `<div class="css-bar-chart" role="img" aria-label="月度收入与消费柱状图">${points.map(p=>`<div class="bar-group"><div class="bar-pair"><span style="height:${p.income==null?0:Math.max(2,p.income/maximum*100)}%" class="bar-income" title="${esc(p.month)} 家庭收入 ${p.income===null?'暂无数据':`${p.income.toFixed(2)} 万元`}"></span><span style="height:${p.expense==null?0:Math.max(2,p.expense/maximum*100)}%" class="bar-expense" title="${esc(p.month)} 生活消费 ${p.expense===null?'暂无数据':`${p.expense.toFixed(2)} 万元`}"></span></div><small>${esc(shortMonth(p.month))}</small></div>`).join('')}</div><div class="chart-legend"><span><i style="background:#44755f"></i>家庭收入</span><span><i style="background:#e0c59a"></i>生活消费</span></div>`;
+  return `<div class="css-bar-chart" role="img" aria-label="月度收入与消费柱状图">${points.map(p=>`<div class="bar-group"><div class="bar-pair"><span style="height:${p.income==null?0:Math.max(2,p.income/maximum*100)}%" class="bar-income" title="${esc(p.month)} 家庭收入 ${p.income===null?'暂无数据':`${p.income.toFixed(2)} 万元`}"></span><span style="height:${p.expense==null?0:Math.max(2,p.expense/maximum*100)}%" class="bar-expense" title="${esc(p.month)} 生活消费 ${p.expense===null?'暂无数据':`${p.expense.toFixed(2)} 万元`}"></span></div><small>${esc(shortMonth(p.month))}</small></div>`).join('')}</div><div class="chart-legend"><span><i style="background:#6f927c"></i>家庭收入</span><span><i style="background:#c5a56d"></i>生活消费</span></div>`;
 }
 function categoryBars(summary){
   if(!summary.categories.length)return empty('尚无共同消费记录','导入账单后这里将展示实际用途分类。');
@@ -168,7 +183,7 @@ function assetRows(asset){
 }
 function assets(){
   const a=assetsAt(state.data,state.month);
-  return `<div class="asset-banner"><div><div class="eyebrow muted-eyebrow">YOUR FAMILY BALANCE SHEET</div><h2>资产负债总览</h2><p>资产估值与交易现金流分开记录，避免重复计数。</p></div><div class="asset-banner-figure"><span>净资产</span><strong>${esc(compactMoney(a?.totalFen))}</strong></div></div>
+  return `<div class="asset-banner"><div><div class="eyebrow muted-eyebrow">资产与负债</div><h2>资产负债总览</h2><p>资产估值与交易现金流分开记录，避免重复计数。</p></div><div class="asset-banner-figure"><span>净资产</span><strong>${esc(compactMoney(a?.totalFen))}</strong></div></div>
     <div class="stats-grid three-stats">${stat('全部资产',compactMoney(a?.assetsFen),'home','金融、实物及其他资产')}${stat('全部负债',compactMoney(a?.liabilitiesFen),'credit','贷款和其他确定负债')}${stat('金融净资产',compactMoney(a?.financialFen),'wallet','金融资产扣除相关金融负债')}</div>
     <div class="content-grid asset-content">${card(header('资产配置','按最近一次可用快照估值')+assetComposition(a))}${card(header('资产与负债明细',a?`共 ${a.items.length} 个账户，保留估值日期`:'尚未建立资产快照')+assetRows(a))}</div>
     <div class="notice-line">${ICON('question',17)}<span>可动用资金只包含标记为「可用」的资产，并扣除已记录的近期到期债务。房产、保单现金价值不会自动计入可用资金。</span></div>`;
@@ -177,7 +192,7 @@ function reports(){
   const m=currentMonth(),s=summarize(m),a=assetsAt(state.data,state.month);
   const prev=sortedMonths(state.data).filter(x=>x.month<state.month).at(-1);
   const difference=prev?s.familyExpenseFen-summarize(prev).familyExpenseFen:null;
-  return `<div class="report-header"><div class="eyebrow muted-eyebrow">MONTHLY FINANCE REPORT</div><h2>${esc(state.month.slice(0,4))} 年 ${Number(state.month.slice(5))} 月家庭月报</h2><p>从收支到资产，一份清晰可追溯的家庭月度记录。</p><div class="report-chips"><span>${ICON('calendar',14)} ${esc(state.month)}</span>${m?pill(m.status):''}<span>${state.mode==='demo'?'演示数据':'加密数据 · 本地查看'}</span></div></div>
+  return `<div class="report-header"><div class="eyebrow muted-eyebrow">月度回顾</div><h2>${esc(state.month.slice(0,4))} 年 ${Number(state.month.slice(5))} 月家庭月报</h2><p>从收支到资产，一份清晰可追溯的家庭月度记录。</p><div class="report-chips"><span>${ICON('calendar',14)} ${esc(state.month)}</span>${m?pill(m.status):''}<span>${state.mode==='demo'?'演示数据':'加密数据 · 本地查看'}</span></div></div>
     <div class="stats-grid three-stats">${stat('家庭总收入',m?.transactions.length?compactMoney(s.incomeFen):'—','down','实际到账收入')}${stat('全部生活消费',compactMoney(s.livingExpenseFen),'credit','共同消费 + 个人消费合计')}${stat('生活结余',compactMoney(s.livingSurplusFen),'trending','不包含投资转换或储蓄型保费')}</div>
     <div class="content-grid report-content">${card(header('本月消费构成','按已确认的统计口径拆分')+`<div class="report-rows">${kpi('共同日常消费',m?.transactions.length?money(s.dailyFen):'—')}${kpi('共同非经常消费',m?.transactions.length?money(s.occasionalFen):'—')}${kpi('个人消费 · 我',money(m?.personalExpensesFen.me))}${kpi('个人消费 · 老婆',money(m?.personalExpensesFen.spouse))}<div class="report-total">${kpi('全部生活消费',money(s.livingExpenseFen))}</div>${kpi('大额专项资金流出',m?.transactions.length?money(s.projectFen):'—',true)}${kpi('储蓄型保险保费',m?.transactions.length?money(s.insuranceFen):'—',true)}</div>`)}${card(header('月度观察','仅根据真实录入数据生成，不推测收益')+`<div class="insights-list"><div><div class="insight-icon">${ICON('activity')}</div><p>${s.personalComplete?'夫妻个人消费金额已计入全部生活消费。':'个人消费汇总尚未完成，因此无法计算准确的生活结余。'}</p></div><div><div class="insight-icon">${ICON('chart')}</div><p>${difference===null?'暂无上月共同消费数据可供比较。':`本月共同生活消费较上月${difference>0?'增加':difference<0?'减少':'持平'} ${esc(compactMoney(Math.abs(difference)))}。`}</p></div><div><div class="insight-icon">${ICON('home')}</div><p>${a?`已记录 ${a.items.length} 个资产负债账户；未更新的资产继续显示旧估值日期。`:'本月尚未建立可靠资产快照，因此不展示推测的净资产。'}</p></div></div>`)}</div>
     ${card(header('账单导入覆盖情况','每个渠道和账户分别核对，不假设固定账单数量')+sourceTable(m?.importSources||[]),'source-panel')}`;
