@@ -1,6 +1,6 @@
 export const expenseLabels={housing:'居住',food:'餐饮',childcare:'育儿',transport:'交通',health:'医疗健康',shopping:'购物',travel:'旅行娱乐',gifts:'人情往来',other:'其他'};
 export const incomeLabels={salary:'工资',rent:'租金',interest:'利息',other:'其他收入'};
-export const kindLabels={income:'家庭收入',daily:'共同日常消费',occasional:'非经常性消费',project:'大额专项',insurance:'储蓄型保费',investment:'投资资产转换',debt:'偿还贷款本金',transfer:'内部转账',refund:'退款'};
+export const kindLabels={income:'家庭收入',daily:'共同日常消费',occasional:'非经常性消费',project:'大额专项',insurance:'储蓄型保费',investment:'投资资产转换',debt:'偿还贷款本金',transfer:'内部转账',deposit:'押金支付',prepayment:'预付房租',refund:'退款'};
 export const assetLabels={cash:'现金及存款',investment:'金融投资',property:'房产',insurance:'保险现金价值',vehicle:'车辆',receivable:'应收及押金',other:'其他资产',liability:'负债'};
 export const toYuan=(fen)=>fen/100;
 export const money=(fen,digits=0)=>fen==null?'—':`¥${toYuan(fen).toLocaleString('zh-CN',{minimumFractionDigits:digits,maximumFractionDigits:digits})}`;
