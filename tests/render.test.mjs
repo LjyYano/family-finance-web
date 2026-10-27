@@ -12,9 +12,10 @@ test('解锁首页、演示四个页面均正常渲染',async()=>{
   handlers.click({target:{closest:()=>({dataset:{action:'demo'}})}});
   assert.match(root.innerHTML,/家庭总净资产/);
   assert.match(root.innerHTML,/演示数据/);
-  for(const [page,title] of [['transactions','家庭交易记录'],['assets','资产负债总览'],['reports','本月消费构成'],['overview','财富增长趋势']]){
+  for(const [page,title] of [['transactions','家庭交易记录'],['assets','资产负债总览'],['reports','本月消费构成'],['overview','净资产趋势']]){
     handlers.click({target:{closest:()=>({dataset:{page}})}});
     assert.ok(root.innerHTML.includes(title),`${page} 渲染失败`);
+    if(['overview','reports'].includes(page))assert.match(root.innerHTML,/spend-chart-columns/);
   }
   handlers.click({target:{closest:()=>({dataset:{action:'lock'}})}});
   assert.match(root.innerHTML,/解锁家庭财务/);
