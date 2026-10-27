@@ -23,6 +23,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Verify finance UI
+        run: node --test tests/*.test.mjs
       - name: Setup Pages
         uses: actions/configure-pages@v6
       - name: Upload static site (ciphertext only)
