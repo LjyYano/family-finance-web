@@ -1,4 +1,5 @@
 import {fetchAndDecrypt} from './crypto.js';
+import {renderPieChart} from './pie.js';
 import {demoData} from './demo.js';
 import {
   assetLabels, assetsAt, compactMoney, expenseLabels, getMonth, history, incomeLabels,
@@ -6,7 +7,7 @@ import {
 } from './finance.js';
 
 const root=document.querySelector('#root');
-const state={data:null,mode:null,page:'overview',month:'',filter:'all',search:'',passphrase:'',visible:false,busy:false,error:'',mobileMenu:false};
+const state={data:null,mode:null,page:'overview',month:'',filter:'all',search:'',passphrase:'',visible:false,busy:false,error:'',mobileMenu:false,categoryDetail:null};
 const pages={overview:'财务总览',transactions:'收支明细',assets:'家庭资产',reports:'月度报告'};
 const pageEmoji={overview:'📒',transactions:'🧾',assets:'🏠',reports:'🗓️'};
 const subtitles={overview:'收入、支出与资产变化，一页掌握。',transactions:'家庭共同消费保留明细，个人消费仅统计月度合计。',assets:'总净资产、金融净资产与可动用资金。',reports:'每个月的收支和资产记录。'};
@@ -85,7 +86,7 @@ function wrapper(content){
   <div class="main-column"><header class="topbar"><div class="topbar-left"><button type="button" class="mobile-menu" data-action="menu" aria-label="展开菜单">${ICON('menu',21)}</button><span>家庭空间</span><span class="breadcrumb-slash">/</span><strong>${pages[state.page]}</strong></div><div class="topbar-right">${state.mode==='demo'?`<span class="demo-label">${ICON('sparkle',13)} 演示数据</span>`:''}<div class="month-picker">${ICON('calendar',16)}<select id="month-select" aria-label="选择报表月份">${monthOptions}</select>${ICON('chevron',15)}</div><button class="top-lock" type="button" data-action="lock" aria-label="锁定财务网站">${ICON('lock',17)}</button></div></header>
   <main class="main-content"><div class="page-head"><div><div class="page-icon" aria-hidden="true">${pageEmoji[state.page]}</div><h1>${pages[state.page]}</h1><p>${subtitles[state.page]}</p></div><div class="head-aside">${month?pill(month.status):''}<span class="update-subtext">${esc(state.month)} · 财务账本</span></div></div>
   ${state.mode==='demo'?`<div class="demo-banner">${ICON('sparkle',17)}<span>当前展示的是完全虚构的演示数据，不代表你的真实家庭资产或消费。</span><button type="button" data-action="lock">切换到真实账本 ${ICON('arrow',14)}</button></div>`:''}
-  ${content}<footer class="footer"><span>Family Finance · 记录生活的长期价值</span><span>${ICON('shield',14)} ${state.mode==='demo'?'模拟数据':tip}</span></footer></main></div>
+  ${content}${categoryDetail()}<footer class="footer"><span>Family Finance · 记录生活的长期价值</span><span>${ICON('shield',14)} ${state.mode==='demo'?'模拟数据':tip}</span></footer></main></div>
   <nav class="mobile-bottom-nav">${Object.entries(pages).map(([id,title])=>`<button type="button" data-page="${id}" class="${state.page===id?'active':''}">${ICON(navIcons[id],20)}<span>${title.replace('财务','')}</span></button>`).join('')}</nav></div>`;
 }
 
@@ -114,11 +115,42 @@ function spendBarChart(points){
   return `<div class="css-bar-chart" role="img" aria-label="月度收入与消费柱状图">${points.map(p=>`<div class="bar-group"><div class="bar-pair"><span style="height:${p.income==null?0:Math.max(2,p.income/maximum*100)}%" class="bar-income" title="${esc(p.month)} 家庭收入 ${p.income===null?'暂无数据':`${p.income.toFixed(2)} 万元`}"></span><span style="height:${p.expense==null?0:Math.max(2,p.expense/maximum*100)}%" class="bar-expense" title="${esc(p.month)} 生活消费 ${p.expense===null?'暂无数据':`${p.expense.toFixed(2)} 万元`}"></span></div><small>${esc(shortMonth(p.month))}</small></div>`).join('')}</div><div class="chart-legend"><span><i style="background:#6f927c"></i>家庭收入</span><span><i style="background:#c5a56d"></i>生活消费</span></div>`;
 }
 function categoryBars(summary){
-  const items=summary.categories.filter(c=>c.amountFen>0).slice(0,9);
-  if(!items.length)return empty('暂无分类支出','当前没有家庭共同消费记录');
-  const max=Math.max(...items.map(c=>c.amountFen));
-  return `<div class='spend-chart' role='img' aria-label='本月家庭共同消费分类柱状图'><div class='spend-chart-columns'>${items.map((c,i)=>`<div class='spend-chart-item'><strong class='spend-chart-number'>${esc(money(c.amountFen,2))}</strong><div class='spend-chart-track'><div class='spend-chart-bar' style='height:${Math.max(3.5,c.amountFen/max*100)}%;background:${palette[i%palette.length]}'></div></div><span class='spend-chart-label'>${esc(c.name)}</span></div>`).join('')}</div><div class='spend-chart-total'><span>共同消费合计</span><strong>${esc(money(summary.familyExpenseFen,2))}</strong></div></div>`;
+  if(!summary.categories.some(item=>item.amountFen>0))return empty('暂无分类支出','当前没有已确认的共同消费。');
+  return renderPieChart(summary,{esc,money,palette});
 }
+function categoryDetail(){
+  if(!state.categoryDetail)return '';
+  const m=currentMonth(),summary=summarize(m);
+  const category=summary.categories.find(item=>item.key===state.categoryDetail);
+  if(!category||category.amountFen<=0)return '';
+  const rows=orderedTransactions(m).filter(t=>
+    t.category===category.key&&
+    (t.kind==='daily'||t.kind==='occasional'||
+      (t.kind==='refund'&&['daily','occasional'].includes(t.refundOf)))
+  );
+  const sumPositive=summary.categories.filter(item=>item.amountFen>0).reduce((sum,item)=>sum+item.amountFen,0);
+  const percent=sumPositive?((category.amountFen/sumPositive)*100).toFixed(1)+'%':'—';
+  const rowsHtml=rows.map(t=>{
+    const refund=t.kind==='refund';
+    return `<div class="category-detail-row">
+      <div class="category-detail-text"><strong>${esc(t.title)}</strong><small>${esc(t.date)} · ${esc(person(t.member))} · ${esc(t.channel||'手工记录')}</small></div>
+      <strong class="category-detail-amount ${refund?'is-refund':''}">${refund?'+':'−'}${esc(money(t.amountFen,2))}</strong>
+    </div>`;
+  }).join('');
+  return `<div class="category-detail-layer">
+    <button type="button" class="category-detail-backdrop" data-action="close-category" aria-label="关闭分类明细"></button>
+    <aside class="category-detail-drawer" role="dialog" aria-modal="true" aria-labelledby="category-detail-title">
+      <header class="category-detail-header"><span>${esc(state.month)} · 分类明细</span><button class="category-detail-close" type="button" data-action="close-category" aria-label="关闭明细">${ICON('close',18)}</button></header>
+      <div class="category-detail-body">
+        <h2 id="category-detail-title">${esc(category.name)}</h2>
+        <div class="category-detail-total">${esc(money(category.amountFen,2))}</div>
+        <p class="category-detail-meta">本月共同消费的 ${esc(percent)} · ${rows.length} 笔记录</p>
+        <div class="category-detail-list">${rowsHtml}</div>
+      </div>
+    </aside>
+  </div>`;
+}
+
 function dataQuality(m,s){
   const sources=m?.importSources||[];
   const full=sources.filter(x=>x.status==='complete').length;
@@ -210,10 +242,10 @@ function render(){
 }
 function startSession(mode,data){
   state.mode=mode;state.data=data;state.month=sortedMonths(data).at(-1)?.month||'';
-  state.page='overview';state.error='';state.passphrase='';state.filter='all';state.search='';state.mobileMenu=false;
+  state.page='overview';state.error='';state.passphrase='';state.filter='all';state.search='';state.mobileMenu=false;state.categoryDetail=null;
   render();window.scrollTo(0,0);
 }
-function lock(){state.data=null;state.mode=null;state.passphrase='';state.error='';state.mobileMenu=false;render();window.scrollTo(0,0);}
+function lock(){state.data=null;state.mode=null;state.passphrase='';state.error='';state.mobileMenu=false;state.categoryDetail=null;render();window.scrollTo(0,0);}
 root.addEventListener('submit',async (event)=>{
   if(event.target.id!=='unlock-form')return;
   event.preventDefault();
@@ -226,19 +258,21 @@ root.addEventListener('submit',async (event)=>{
   finally{state.busy=false;state.passphrase='';render();}
 });
 root.addEventListener('click',(event)=>{
-  const el=event.target.closest('button');
+  const el=event.target.closest('button, [data-pie-category]');
   if(!el)return;
-  if(el.dataset.page){state.page=el.dataset.page;state.mobileMenu=false;state.search='';state.filter='all';render();window.scrollTo({top:0,behavior:'smooth'});return;}
+  if(el.dataset.pieCategory){openCategory(el.dataset.pieCategory);return;}
+  if(el.dataset.page){state.categoryDetail=null;state.page=el.dataset.page;state.mobileMenu=false;state.search='';state.filter='all';render();window.scrollTo({top:0,behavior:'smooth'});return;}
   switch(el.dataset.action){
     case 'demo':startSession('demo',demoData);break;
     case 'lock':lock();break;
     case 'reveal':state.passphrase=document.querySelector('#passphrase')?.value||state.passphrase;state.visible=!state.visible;render();document.querySelector('#passphrase')?.focus();break;
     case 'menu':state.mobileMenu=true;render();break;
     case 'close-menu':state.mobileMenu=false;render();break;
+    case 'close-category':state.categoryDetail=null;render();break;
   }
 });
 root.addEventListener('change',(event)=>{
-  if(event.target.id==='month-select'){state.month=event.target.value;state.search='';state.filter='all';render();}
+  if(event.target.id==='month-select'){state.categoryDetail=null;state.month=event.target.value;state.search='';state.filter='all';render();}
   if(event.target.id==='kind-select'){state.filter=event.target.value;render();}
 });
 root.addEventListener('input',(event)=>{
@@ -251,4 +285,49 @@ root.addEventListener('input',(event)=>{
     el?.focus();if(el?.setSelectionRange)el.setSelectionRange(selection,selection);
   }
 });
+function openCategory(key){
+  const item=summarize(currentMonth()).categories.find(c=>c.key===key&&c.amountFen>0);
+  if(!item)return;
+  state.categoryDetail=key;
+  render();
+  document.querySelector('.category-detail-close')?.focus();
+}
+function categoryHover(node,on){
+  const chart=node.closest('.category-pie');
+  if(!chart)return;
+  const key=node.dataset.pieCategory;
+  chart.querySelectorAll('[data-pie-category]').forEach(item=>{
+    item.classList.toggle('is-hovered',on&&item.dataset.pieCategory===key);
+  });
+  const name=chart.querySelector('[data-pie-center-name]');
+  const amount=chart.querySelector('[data-pie-center-amount]');
+  const percent=chart.querySelector('[data-pie-center-percent]');
+  if(name)name.textContent=on?node.dataset.pieName:'共同消费';
+  if(amount)amount.textContent=on?node.dataset.pieAmount:chart.dataset.pieTotal;
+  if(percent)percent.textContent=on?node.dataset.piePercent:'分类占比';
+}
+root.addEventListener('mouseover',event=>{
+  const item=event.target.closest('[data-pie-category]');
+  if(item&&!item.contains(event.relatedTarget))categoryHover(item,true);
+});
+root.addEventListener('mouseout',event=>{
+  const item=event.target.closest('[data-pie-category]');
+  if(item&&!item.contains(event.relatedTarget))categoryHover(item,false);
+});
+root.addEventListener('focusin',event=>{
+  const item=event.target.closest('[data-pie-category]');
+  if(item)categoryHover(item,true);
+});
+root.addEventListener('focusout',event=>{
+  const item=event.target.closest('[data-pie-category]');
+  if(item)categoryHover(item,false);
+});
+root.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&state.categoryDetail){state.categoryDetail=null;render();return;}
+  if((event.key==='Enter'||event.key===' ')&&event.target.matches?.('.pie-slice')){
+    event.preventDefault();
+    openCategory(event.target.dataset.pieCategory);
+  }
+});
+
 render();
