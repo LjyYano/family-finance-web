@@ -349,3 +349,15 @@ svg {flex-shrink:0}
   .stat-detail {font-size:10px}
 }
 @media(prefers-reduced-motion:reduce) {*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+/* Notion-like spending columns; exact cents visible above each bar */
+.spend-chart {margin-top:16px}
+.spend-chart-columns {display:flex;align-items:stretch;gap:12px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:thin}
+.spend-chart-item {flex:1;min-width:72px;display:flex;flex-direction:column;align-items:center;gap:7px;justify-content:flex-end}
+.spend-chart-number {font-variant-numeric:tabular-nums;font-weight:600;font-size:11px;color:#37352f;white-space:nowrap}
+.spend-chart-track {height:145px;min-height:145px;width:100%;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid #dcdcd9}
+.spend-chart-bar {width:min(64%,52px);min-height:4px;border-radius:3px 3px 0 0;transition:height .2s ease}
+.spend-chart-label {font-size:11px;color:#787774;white-space:nowrap}
+.spend-chart-total {display:flex;justify-content:space-between;align-items:center;padding-top:14px;margin-top:6px;border-top:1px solid #eee;font-size:12px;color:#787774}
+.spend-chart-total strong {font-weight:650;font-variant-numeric:tabular-nums;color:#37352f}
+.page-head p,.stat-detail,.sidebar-security,.notice-line,.footer,.section-title p,.asset-banner p {display:none}
+@media(max-width:600px){.spend-chart-columns{gap:10px}.spend-chart-track{height:126px;min-height:126px}.spend-chart-item{min-width:75px}.spend-chart-number{font-size:10px}}
