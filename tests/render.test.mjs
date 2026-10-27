@@ -15,8 +15,19 @@ test('解锁首页、演示四个页面均正常渲染',async()=>{
   for(const [page,title] of [['transactions','家庭交易记录'],['assets','资产负债总览'],['reports','本月消费构成'],['overview','净资产趋势']]){
     handlers.click({target:{closest:()=>({dataset:{page}})}});
     assert.ok(root.innerHTML.includes(title),`${page} 渲染失败`);
-    if(['overview','reports'].includes(page))assert.match(root.innerHTML,/spend-chart-columns/);
+    if(['overview','reports'].includes(page)){
+      assert.match(root.innerHTML,/class="category-pie"/);
+      assert.match(root.innerHTML,/data-pie-percent="\d+\.\d%"/);
+      assert.match(root.innerHTML,/class="pie-legend-row"/);
+    }
   }
+  handlers.click({target:{closest:()=>({dataset:{page:'overview'}})}});
+  handlers.click({target:{closest:()=>({dataset:{pieCategory:'housing'}})}});
+  assert.match(root.innerHTML,/class="category-detail-drawer"/);
+  assert.match(root.innerHTML,/本月房屋租金/);
+  assert.match(root.innerHTML,/本月共同消费的/);
+  handlers.click({target:{closest:()=>({dataset:{action:'close-category'}})}});
+  assert.doesNotMatch(root.innerHTML,/class="category-detail-drawer"/);
   handlers.click({target:{closest:()=>({dataset:{action:'lock'}})}});
   assert.match(root.innerHTML,/解锁家庭财务/);
   assert.doesNotMatch(root.innerHTML,/演示数据/);
